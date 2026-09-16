@@ -1,0 +1,58 @@
+name: Radar emploi
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # tous les jours à 6h UTC (~7h Paris hiver, 8h Paris été)
+  workflow_dispatch:        # permet de le lancer manuellement depuis l'onglet Actions du repo
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - name: Restaurer l'historique des offres déjà vues
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            offres_vues.json
+            nouvelles_offres.csv
+          key: radar-state-${{ github.run_id }}
+          restore-keys: |
+            radar-state-
+
+      - name: Lancer le radar
+        env:
+          FT_CLIENT_ID: ${{ secrets.FT_CLIENT_ID }}
+          FT_CLIENT_SECRET: ${{ secrets.FT_CLIENT_SECRET }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+        run: python job_radar.py
+
+      - name: Sauvegarder le nouvel état
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            offres_vues.json
+            nouvelles_offres.csv
+          key: radar-state-${{ github.run_id }}
+
+      - name: Créer une issue si nouvelles offres
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s dernier_run.md ]; then
+            gh issue create --title "Nouvelles offres - $(date +%Y-%m-%d)" --body-file dernier_run.md
+          else
+            echo "Rien de nouveau aujourd'hui."
+          fi
