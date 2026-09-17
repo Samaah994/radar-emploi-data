@@ -21,7 +21,7 @@ import os
 import csv
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 
@@ -48,6 +48,7 @@ DEPARTEMENT_FT = "59,75"
 
 LOCALISATION_ADZUNA = ""  # ex: "Lille" — vide pour toute la France
 RESULTATS_PAR_RECHERCHE = 20
+JOURS_MAX = 7  # ignore les offres publiées il y a plus de X jours
 
 FICHIER_SUIVI = "offres_vues.json"
 FICHIER_RESULTATS = "nouvelles_offres.csv"
@@ -74,7 +75,10 @@ def chercher_france_travail(token, mot_cle):
     
     if DEPARTEMENT_FT:
         params["departement"] = DEPARTEMENT_FT
-        
+
+    date_min = datetime.utcnow() - timedelta(days=JOURS_MAX)
+    params["minCreationDate"] = date_min.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     resp = requests.get(FT_SEARCH_URL, headers=headers, params=params, timeout=15)
     if resp.status_code == 204:
         return []
@@ -103,6 +107,7 @@ def chercher_adzuna(app_id, app_key, mot_cle):
         "what": mot_cle,
         "results_per_page": RESULTATS_PAR_RECHERCHE,
         "content-type": "application/json",
+        "max_days_old": JOURS_MAX,
     }
     if LOCALISATION_ADZUNA:
         params["where"] = LOCALISATION_ADZUNA
@@ -161,7 +166,7 @@ def main():
     if not ft_id or not ft_secret:
         raise SystemExit("Il manque FT_CLIENT_ID / FT_CLIENT_SECRET dans les variables d'environnement.")
     if not az_id or not az_key:
-        print("⚠️ ADZUNA_APP_ID / ADZUNA_APP_KEY absents : Adzuna sera ignoré cette fois.")
+        print(" ADZUNA_APP_ID / ADZUNA_APP_KEY absents : Adzuna sera ignoré cette fois.")
 
     offres_vues = charger_offres_vues()
     nouvelles = []
@@ -175,7 +180,7 @@ def main():
                     nouvelles.append(offre)
                     offres_vues.add(offre["id"])
         except requests.RequestException as e:
-            print(f"❌ Erreur lors de la recherche FT pour '{mot_cle}': {e}")
+            print(f" Erreur lors de la recherche FT pour '{mot_cle}': {e}")
 
         time.sleep(0.15)
 
@@ -187,7 +192,7 @@ def main():
                         nouvelles.append(offre)
                         offres_vues.add(offre["id"])
             except requests.RequestException as e:
-                print(f"❌ Erreur lors de la recherche Adzuna pour '{mot_cle}': {e}")
+                print(f" Erreur lors de la recherche Adzuna pour '{mot_cle}': {e}")
 
             time.sleep(0.15)
 
@@ -211,7 +216,7 @@ def main():
                         offre["lien"],
                     ]
                 )
-        print(f"✅ {len(nouvelles)} nouvelle(s) offre(s) ajoutée(s) à {FICHIER_RESULTATS}")
+        print(f" {len(nouvelles)} nouvelle(s) offre(s) ajoutée(s) à {FICHIER_RESULTATS}")
     else:
         print("Aucune nouvelle offre cette fois-ci.")
 
