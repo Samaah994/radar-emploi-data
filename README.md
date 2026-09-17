@@ -12,5 +12,5 @@ Python 3 · requests · API Offres d'emploi v2 (France Travail) · API Adzuna
 4. Export des nouvelles offres dans nouvelles_offres.csv.
 5. Automatisé quotidiennement via GitHub Actions, notification par Issue GitHub.
 
-## Limite assumée
+## Limite 
 Automatise la veille (trouver, trier, dédoublonner), et pas encore l'envoi de candidatures.
