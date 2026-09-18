@@ -143,11 +143,13 @@ def sauver_offres_vues(ids):
 
 
 def ecrire_dernier_run(nouvelles):
-    """Résumé markdown des offres trouvées lors de cette exécution."""
+    """Résumé markdown des offres trouvées lors de cette exécution.
+    Fichier laissé réellement vide (0 octet) si rien de nouveau : c'est ce
+    que le workflow vérifie pour décider de créer une notification ou non."""
+    if not nouvelles:
+        open("dernier_run.md", "w", encoding="utf-8").close()
+        return
     with open("dernier_run.md", "w", encoding="utf-8") as f:
-        if not nouvelles:
-            f.write("Aucune nouvelle offre trouvée lors de cet exécution.\n")
-            return
         f.write(f"## {len(nouvelles)} nouvelle(s) offre(s) trouvée(s)\n\n")
         for offre in nouvelles:
             f.write(
